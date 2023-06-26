@@ -1,4 +1,4 @@
-const UNIT_PER_SECOND_SPEED = 2;
+const UNIT_PER_SECOND_SPEED = 5;
 const SNAKE_PIXEL_W = 20;
 const SNAKE_BACKGROUND = "#00ff00";
 const CANVAS_COLOR = "#000000";
@@ -47,19 +47,19 @@ function SnakeGame() {
     document.addEventListener("keydown", (event) => {
       switch (event.key) {
         case "ArrowDown":
-          this.snakeMove(0, SNAKE_PIXEL_W);
+          // this.snakeMove(0, SNAKE_PIXEL_W);
           this.moveDirection = "D";
           break;
         case "ArrowUp":
-          this.snakeMove(0, -SNAKE_PIXEL_W);
+          // this.snakeMove(0, -SNAKE_PIXEL_W);
           this.moveDirection = "U";
           break;
         case "ArrowLeft":
-          this.snakeMove(-SNAKE_PIXEL_W, 0);
+          // this.snakeMove(-SNAKE_PIXEL_W, 0);
           this.moveDirection = "L";
           break;
         case "ArrowRight":
-          this.snakeMove(SNAKE_PIXEL_W, 0);
+          // this.snakeMove(SNAKE_PIXEL_W, 0);
           this.moveDirection = "R";
           break;
       }
@@ -68,7 +68,7 @@ function SnakeGame() {
   this.beginSnakeAutoMovement = () => {
     this.autoMovement = setInterval(() => {
       if (this.collision == true && this.pause_on_collision == true) return;
-      return;
+      // return;
       switch (this.moveDirection) {
         case "D":
           this.snakeMove(0, SNAKE_PIXEL_W);
@@ -142,25 +142,26 @@ function SnakeGame() {
   this.snakeMove = (x, y) => {
     const xinc = this.snake_x + x;
     const yinc = this.snake_y + y;
-    const snakeEeatingItsOwnBody = this.snake_cell_array.some(
+    const snakeEatingItsOwnBody = this.snake_cell_array.some(
       (a, ind) => xinc == a.x && yinc == a.y && ind != 0
     );
-    if (snakeEeatingItsOwnBody) {
+    if (snakeEatingItsOwnBody) {
       console.log("self Collision");
+      this.restart();
       return;
     }
     if (xinc <= this.canvas.width && xinc >= 0) {
       this.snake_x = xinc;
     } else {
+      // this.collision = true;
       this.restart();
-      this.collision = true;
       return;
     }
     if (yinc <= this.canvas.height && yinc >= 0) {
       this.snake_y = yinc;
     } else {
+      // this.collision = true;
       this.restart();
-      this.collision = true;
       return;
     }
 
@@ -190,9 +191,10 @@ function SnakeGame() {
   };
 
   this.restart = () => {
+    if (this.pause_on_collision) return;
     this.initFoodPosition();
     this.initCoreValues();
-    this.snakeMove(0, 0);
+    // this.snakeMove(0, 0);
   };
 
   this.setCanvasheight();
