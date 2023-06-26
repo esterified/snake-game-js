@@ -1,21 +1,44 @@
-const UNIT_PER_SECOND = 5;
+const UNIT_PER_SECOND_SPEED = 2;
 const SNAKE_PIXEL_W = 20;
 const SNAKE_BACKGROUND = "#00ff00";
 const CANVAS_COLOR = "#000000";
 const FOOD_COLOR = "#ff0000";
+const SNAKE_LENGTH = 3;
 
 function SnakeGame() {
   this.canvas = document.getElementById("myCanvas");
   this.canvas.style.backgroundColor = CANVAS_COLOR;
   this.ctx = this.canvas.getContext("2d");
-  this.fps = UNIT_PER_SECOND;
+  this.foodImage = document.createElement("img");
+  this.foodImage.src = "./food.png";
+  this.foodImage.onload = () => {
+    this.foodImageLoaded = true;
+    console.log("food image loaded");
+  };
+  this.fps = UNIT_PER_SECOND_SPEED;
   this.pause_on_collision = false;
   this.initCoreValues = () => {
-    this.snake_x = 0;
+    this.snake_length = SNAKE_LENGTH;
+    this.snake_x = SNAKE_PIXEL_W * (this.snake_length - 1);
     this.snake_y = 0;
-    this.snake_length = 1;
+    this.snake_cell_array = [];
+    this.snakeTurnQueue = [];
     this.moveDirection = "R";
     this.collision = false;
+    this.initSnakeArray();
+    this.prev_shadow_array = this.snake_cell_array;
+  };
+  this.initSnakeArray = () => {
+    const snakeArray = new Array(this.snake_length).fill(1);
+    for (const [index] of snakeArray.entries()) {
+      let current_x = this.snake_x - index * SNAKE_PIXEL_W;
+      let current_y = this.snake_y;
+
+      this.snake_cell_array[index] = {
+        x: current_x,
+        y: current_y,
+      };
+    }
   };
   this.initEventListeners = () => {
     window.addEventListener("resize", () => {
@@ -24,19 +47,19 @@ function SnakeGame() {
     document.addEventListener("keydown", (event) => {
       switch (event.key) {
         case "ArrowDown":
-          // this.snakeMove(0, SNAKE_PIXEL_W);
+          this.snakeMove(0, SNAKE_PIXEL_W);
           this.moveDirection = "D";
           break;
         case "ArrowUp":
-          // this.snakeMove(0, -SNAKE_PIXEL_W);
+          this.snakeMove(0, -SNAKE_PIXEL_W);
           this.moveDirection = "U";
           break;
         case "ArrowLeft":
-          // this.snakeMove(-SNAKE_PIXEL_W, 0);
+          this.snakeMove(-SNAKE_PIXEL_W, 0);
           this.moveDirection = "L";
           break;
         case "ArrowRight":
-          // this.snakeMove(SNAKE_PIXEL_W, 0);
+          this.snakeMove(SNAKE_PIXEL_W, 0);
           this.moveDirection = "R";
           break;
       }
@@ -45,7 +68,7 @@ function SnakeGame() {
   this.beginSnakeAutoMovement = () => {
     this.autoMovement = setInterval(() => {
       if (this.collision == true && this.pause_on_collision == true) return;
-
+      return;
       switch (this.moveDirection) {
         case "D":
           this.snakeMove(0, SNAKE_PIXEL_W);
@@ -64,16 +87,21 @@ function SnakeGame() {
     }, 1000 / this.fps);
   };
   this.drawSnake = () => {
-    this.ctx.fillStyle = SNAKE_BACKGROUND;
-    this.ctx.fillRect(this.snake_x, this.snake_y, SNAKE_PIXEL_W, SNAKE_PIXEL_W);
-    this.ctx.strokeStyle = "#000000";
-    this.ctx.lineWidth = 1;
-    this.ctx.strokeRect(
-      this.snake_x + 2,
-      this.snake_y + 2,
-      SNAKE_PIXEL_W - 4,
-      SNAKE_PIXEL_W - 4
-    );
+    for (const [index, coord] of this.snake_cell_array.entries()) {
+      this.ctx.fillStyle = SNAKE_BACKGROUND;
+      this.ctx.fillRect(coord.x, coord.y, SNAKE_PIXEL_W, SNAKE_PIXEL_W);
+      this.ctx.strokeStyle = "#000000";
+      this.ctx.lineWidth = 1;
+      this.ctx.strokeRect(coord.x + 2, coord.y + 2, SNAKE_PIXEL_W - 4, SNAKE_PIXEL_W - 4);
+      if (index == 0) {
+        this.ctx.fillStyle = "black";
+        this.ctx.font = "15px Arial";
+        this.ctx.textAlign = "center";
+        this.ctx.textBaseline = "middle";
+        this.ctx.fillText("~", this.snake_x + 10, this.snake_y + 10);
+      }
+    }
+    // console.log("Array", JSON.stringify(this.snake_cell_array));
   };
   this.setCanvasheight = () => {
     this.canvas.width = document.documentElement.clientWidth - 20;
@@ -84,8 +112,15 @@ function SnakeGame() {
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   };
   this.drawFood = () => {
-    this.ctx.fillStyle = FOOD_COLOR;
-    this.ctx.fillRect(this.food_x, this.food_y, SNAKE_PIXEL_W, SNAKE_PIXEL_W);
+    // this.ctx.fillStyle = FOOD_COLOR;
+    // this.ctx.fillRect(this.food_x, this.food_y, SNAKE_PIXEL_W, SNAKE_PIXEL_W);
+    this.ctx.drawImage(
+      this.foodImage,
+      this.food_x,
+      this.food_y,
+      SNAKE_PIXEL_W,
+      SNAKE_PIXEL_W
+    );
   };
   this.initFoodPosition = () => {
     this.food_x =
@@ -107,27 +142,51 @@ function SnakeGame() {
   this.snakeMove = (x, y) => {
     const xinc = this.snake_x + x;
     const yinc = this.snake_y + y;
+    const snakeEeatingItsOwnBody = this.snake_cell_array.some(
+      (a, ind) => xinc == a.x && yinc == a.y && ind != 0
+    );
+    if (snakeEeatingItsOwnBody) {
+      console.log("self Collision");
+      return;
+    }
     if (xinc <= this.canvas.width && xinc >= 0) {
       this.snake_x = xinc;
     } else {
       this.restart();
       this.collision = true;
+      return;
     }
     if (yinc <= this.canvas.height && yinc >= 0) {
       this.snake_y = yinc;
     } else {
       this.restart();
       this.collision = true;
+      return;
+    }
+
+    // Snake Multi Cell Jus tHistory tracking
+    this.prev_shadow_array = [...this.snake_cell_array];
+    for (const [ind] of this.snake_cell_array.entries()) {
+      const isHead = ind == 0;
+      if (isHead) {
+        this.snake_cell_array[ind] = {
+          x: this.snake_x,
+          y: this.snake_y,
+        };
+      } else {
+        this.snake_cell_array[ind] = this.prev_shadow_array[ind - 1];
+      }
     }
 
     if (this.food_x == this.snake_x && this.food_y == this.snake_y) {
+      this.snake_cell_array.push(this.prev_shadow_array[this.snake_length - 1]);
       this.snake_length += 1;
       this.initFoodPosition();
     }
     this.eraseBoard();
     this.drawFood();
     this.drawSnake();
-    this.drawPoint();
+    // this.drawPoint();
   };
 
   this.restart = () => {
@@ -145,4 +204,4 @@ function SnakeGame() {
 }
 
 const Canvas_ = new SnakeGame();
-// Canvas_.drawSnake();
+Canvas_.drawSnake();
