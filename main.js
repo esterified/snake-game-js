@@ -4,19 +4,16 @@ const SNAKE_BACKGROUND = "#00ff00";
 const CANVAS_COLOR = "#000000";
 const FOOD_COLOR = "#ff0000";
 const SNAKE_LENGTH = 3;
+const SPRITE_FOOD_WIDTH = 130;
+const MAX_SPRITE_FOOD_COLUMN = 21;
 
 function SnakeGame() {
   this.canvas = document.getElementById("myCanvas");
   this.canvas.style.backgroundColor = CANVAS_COLOR;
   this.ctx = this.canvas.getContext("2d");
-  this.foodImage = document.createElement("img");
-  this.foodImage.src = "./food.png";
-  this.foodImage.onload = () => {
-    this.foodImageLoaded = true;
-    console.log("food image loaded");
-  };
   this.fps = UNIT_PER_SECOND_SPEED;
   this.pause_on_collision = false;
+
   this.initCoreValues = () => {
     this.snake_length = SNAKE_LENGTH;
     this.snake_x = SNAKE_PIXEL_W * (this.snake_length - 1);
@@ -40,6 +37,15 @@ function SnakeGame() {
       };
     }
   };
+  this.initFoodImage = () => {
+    this.foodImage = document.createElement("img");
+    this.foodImage.src = "./food-sprite.png";
+    this.foodImage.onload = () => {
+      this.foodImageLoaded = true;
+      console.log("food image loaded");
+    };
+  };
+
   this.initEventListeners = () => {
     window.addEventListener("resize", () => {
       this.setCanvasheight();
@@ -83,7 +89,6 @@ function SnakeGame() {
           this.snakeMove(SNAKE_PIXEL_W, 0);
           break;
       }
-      // this.snakeMove(SNAKE_PIXEL_W, 0);
     }, 1000 / this.fps);
   };
   this.drawSnake = () => {
@@ -101,7 +106,6 @@ function SnakeGame() {
         this.ctx.fillText("~", this.snake_x + 10, this.snake_y + 10);
       }
     }
-    // console.log("Array", JSON.stringify(this.snake_cell_array));
   };
   this.setCanvasheight = () => {
     this.canvas.width = document.documentElement.clientWidth - 20;
@@ -112,10 +116,12 @@ function SnakeGame() {
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   };
   this.drawFood = () => {
-    // this.ctx.fillStyle = FOOD_COLOR;
-    // this.ctx.fillRect(this.food_x, this.food_y, SNAKE_PIXEL_W, SNAKE_PIXEL_W);
     this.ctx.drawImage(
       this.foodImage,
+      this.food_src_x,
+      0,
+      SPRITE_FOOD_WIDTH,
+      SPRITE_FOOD_WIDTH,
       this.food_x,
       this.food_y,
       SNAKE_PIXEL_W,
@@ -123,6 +129,8 @@ function SnakeGame() {
     );
   };
   this.initFoodPosition = () => {
+    this.food_src_x =
+      Math.floor(Math.random() * MAX_SPRITE_FOOD_COLUMN) * SPRITE_FOOD_WIDTH;
     this.food_x =
       Math.round(
         Math.floor(Math.random() * (this.canvas.width - SNAKE_PIXEL_W)) / SNAKE_PIXEL_W
@@ -139,13 +147,23 @@ function SnakeGame() {
     this.ctx.textBaseline = "middle";
     this.ctx.fillText(this.snake_length, this.snake_x + 10, this.snake_y + 10);
   };
+  this.renderFrame = () => {
+    this.eraseBoard();
+    this.drawFood();
+    this.drawSnake();
+  };
+
   this.snakeMove = (x, y) => {
-    const xinc = this.snake_x + x;
-    const yinc = this.snake_y + y;
-    const snakeEatingItsOwnBody = this.snake_cell_array.some(
+    let xinc = this.snake_x + x;
+    let yinc = this.snake_y + y;
+    const snakeEatingItsOwnCellIndex = this.snake_cell_array.findIndex(
       (a, ind) => xinc == a.x && yinc == a.y && ind != 0
     );
-    if (snakeEatingItsOwnBody) {
+    if (snakeEatingItsOwnCellIndex == 1) {
+      xinc = this.snake_x - x;
+      yinc = this.snake_y - y;
+    }
+    if (snakeEatingItsOwnCellIndex > 1) {
       console.log("self Collision");
       this.restart();
       return;
@@ -165,7 +183,7 @@ function SnakeGame() {
       return;
     }
 
-    // Snake Multi Cell Jus tHistory tracking
+    // Snake Multi Cell History tracking
     this.prev_shadow_array = [...this.snake_cell_array];
     for (const [ind] of this.snake_cell_array.entries()) {
       const isHead = ind == 0;
@@ -184,9 +202,7 @@ function SnakeGame() {
       this.snake_length += 1;
       this.initFoodPosition();
     }
-    this.eraseBoard();
-    this.drawFood();
-    this.drawSnake();
+    this.renderFrame();
     // this.drawPoint();
   };
 
@@ -197,6 +213,7 @@ function SnakeGame() {
     // this.snakeMove(0, 0);
   };
 
+  this.initFoodImage();
   this.setCanvasheight();
   this.initFoodPosition();
   this.initCoreValues();
@@ -206,4 +223,4 @@ function SnakeGame() {
 }
 
 const Canvas_ = new SnakeGame();
-Canvas_.drawSnake();
+Canvas_.renderFrame();
